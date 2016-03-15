@@ -14,14 +14,13 @@ import be.abeel.util.FrequencyMapUtils
 
 object CloneDiscovery extends Tool {
 
-  
-  override val version="""
+  override val version = """
     2014-2015     Initial version that identifies clusters based on DBSCAN
     2015/04/07    Made all detailed files optional verbose output
                   Improved clustering naming scheme  
     2015/08/13    First version on GitHub
     """
-  
+
   /**
    * Specifies the density (the range-query must contain at least minPoints
    * instances)
@@ -43,7 +42,7 @@ object CloneDiscovery extends Tool {
 
   def main(args: Array[String]): Unit = {
     val parser = new scopt.OptionParser[Config]("java -jar hadeda.jar clones") {
-      opt[String]('i', "input") required () action { (x, c) => c.copy(input = x) } text ("Input file that contains the pairwise snp count matrix (*.apr15.snpmatrix.txt).") 
+      opt[String]('i', "input") required () action { (x, c) => c.copy(input = x) } text ("Input file that contains the pairwise snp count matrix (*.apr15.snpmatrix.txt).")
 
       opt[String]('o', "output") required () action { (x, c) => c.copy(output = x) } text ("File prefix for the output files.")
 
@@ -58,7 +57,7 @@ object CloneDiscovery extends Tool {
   }
 
   private def obfus(id: Int, range: Int) = {
-   
+
     range + "-" + range.toHexString + "." + id.toHexString
   }
 
@@ -128,27 +127,29 @@ object CloneDiscovery extends Tool {
           println("Unclustered: " + item + "\t" + neighbors.size)
           assume(neighbors.size < minPoints, "Too many neighbors, clustering likely failed: " + neighbors)
           if (neighbors.size > 0) {
-            wrapMap.getOrElse(item._1, null).clusterIdx = currentIdx
-            for (n <- neighbors) {
-              wrapMap.getOrElse(n, null).clusterIdx = currentIdx
+            if (wrapMap.getOrElse(item._1, null).clusterIdx == -1) {
+              wrapMap.getOrElse(item._1, null).clusterIdx = currentIdx
+              for (n <- neighbors) {
+                wrapMap.getOrElse(n, null).clusterIdx = currentIdx
+              }
+
+              val cluster = wrapMap.filter(_._2.clusterIdx == currentIdx).toList
+
+              if (cluster.size > 0) {
+                val link: MutableList[Wrapper] = new MutableList[Wrapper]
+
+                clusters += cluster.map(_._2).toList
+                clusterCount += 1
+                fmClusterSize.count(cluster.size)
+
+                println("Writing: " + currentIdx + "\t" + cluster.size + "\t")
+                val ob = obfus(currentIdx, epsilon)
+                out.println(cluster.map(_._1).mkString("\t" + ob + "\n") + "\t" + ob)
+
+              }
+
+              currentIdx += 1
             }
-
-            val cluster = wrapMap.filter(_._2.clusterIdx == currentIdx).toList
-
-            if (cluster.size > 0) {
-              val link: MutableList[Wrapper] = new MutableList[Wrapper]
-
-              clusters += cluster.map(_._2).toList
-              clusterCount += 1
-              fmClusterSize.count(cluster.size)
-
-              println("Writing: " + currentIdx + "\t" + cluster.size + "\t")
-              val ob = obfus(currentIdx, epsilon)
-              out.println(cluster.map(_._1).mkString("\t" + ob + "\n") + "\t" + ob)
-
-            }
-
-            currentIdx += 1
           }
 
         }
@@ -228,7 +229,7 @@ object CloneDiscovery extends Tool {
 
     }
     pw.close
-   
+
   }
 }
 
