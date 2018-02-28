@@ -18,3 +18,4 @@ project/plugins/project/
 /bin
 /hadeda-development.zip
 /.classpath
+/.cache-main
